@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/widgets.dart';
+import 'package:go_router/src/delegate.dart';
 
 import '../router.dart';
 
@@ -69,6 +70,10 @@ extension GoRouterHelper on BuildContext {
   /// Pop the top page off the Navigator's page stack by calling
   /// [Navigator.pop].
   void pop<T extends Object?>([T? result]) => GoRouter.of(this).pop(result);
+
+  /// Pop the Navigator's page stack until the predicate returns `true`.
+  void popUntil(PopUntilPredicate predicate) =>
+      GoRouter.of(this).popUntil(predicate);
 
   /// Replaces the top-most page of the page stack with the given URL location
   /// w/ optional query parameters, e.g. `/family/f2/person/p1?color=blue`.
