@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'match.dart';
+import 'path_utils.dart';
 
 /// The type of the navigation.
 ///
@@ -49,7 +50,7 @@ class RouteInformationState<T> {
     this.baseRouteMatchList,
     required this.type,
   })  : assert((type == NavigatingType.go || type == NavigatingType.restore) ==
-            (completer == null)),
+      (completer == null)),
         assert((type != NavigatingType.go) == (baseRouteMatchList != null));
 
   /// The extra object used when navigating with [GoRouter].
@@ -93,7 +94,7 @@ class GoRouteInformationProvider extends RouteInformationProvider
 
   static WidgetsBinding get _binding => WidgetsBinding.instance;
   static final RouteInformation _kEmptyRouteInformation =
-      RouteInformation(uri: Uri.parse(''));
+  RouteInformation(uri: Uri.parse(''));
 
   @override
   void routerReportsNewRouteInformation(RouteInformation routeInformation,
@@ -135,11 +136,16 @@ class GoRouteInformationProvider extends RouteInformationProvider
   }
 
   void _setValue(String location, Object state) {
-    final Uri uri = Uri.parse(location);
+    Uri uri = Uri.parse(location);
+
+    // Check for relative location
+    if (location.startsWith('./')) {
+      uri = concatenateUris(_value.uri, uri);
+    }
 
     final bool shouldNotify =
-        _valueHasChanged(newLocationUri: uri, newState: state);
-    _value = RouteInformation(uri: Uri.parse(location), state: state);
+    _valueHasChanged(newLocationUri: uri, newState: state);
+    _value = RouteInformation(uri: uri, state: state);
     if (shouldNotify) {
       notifyListeners();
     }
@@ -238,9 +244,9 @@ class GoRouteInformationProvider extends RouteInformationProvider
   bool _valueHasChanged(
       {required Uri newLocationUri, required Object? newState}) {
     const DeepCollectionEquality deepCollectionEquality =
-        DeepCollectionEquality();
+    DeepCollectionEquality();
     return !deepCollectionEquality.equals(
-            _value.uri.path, newLocationUri.path) ||
+        _value.uri.path, newLocationUri.path) ||
         !deepCollectionEquality.equals(
             _value.uri.queryParameters, newLocationUri.queryParameters) ||
         !deepCollectionEquality.equals(
