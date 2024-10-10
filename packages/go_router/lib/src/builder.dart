@@ -18,22 +18,22 @@ import 'state.dart';
 
 /// Signature of a go router builder function with navigator.
 typedef GoRouterBuilderWithNav = Widget Function(
-  BuildContext context,
-  Widget child,
-);
+    BuildContext context,
+    Widget child,
+    );
 
 typedef _PageBuilderForAppType = Page<void> Function({
-  required LocalKey key,
-  required String? name,
-  required Object? arguments,
-  required String restorationId,
-  required Widget child,
+required LocalKey key,
+required String? name,
+required Object? arguments,
+required String restorationId,
+required Widget child,
 });
 
 typedef _ErrorBuilderForAppType = Widget Function(
-  BuildContext context,
-  GoRouterState state,
-);
+    BuildContext context,
+    GoRouterState state,
+    );
 
 /// Signature for a function that takes in a `route` to be popped with
 /// the `result` and returns a boolean decision on whether the pop
@@ -66,8 +66,6 @@ class RouteBuilder {
   /// Error page builder for the go router delegate.
   final GoRouterPageBuilder? errorPageBuilder;
 
-  /// Notify the parent navigator to update its pages.
-
   /// Error widget builder for the go router delegate.
   final GoRouterWidgetBuilder? errorBuilder;
 
@@ -98,10 +96,10 @@ class RouteBuilder {
 
   /// Builds the top-level Navigator for the given [RouteMatchList].
   Widget build(
-    BuildContext context,
-    RouteMatchList matchList,
-    bool routerNeglect,
-  ) {
+      BuildContext context,
+      RouteMatchList matchList,
+      bool routerNeglect,
+      ) {
     if (matchList.isEmpty && !matchList.isError) {
       // The build method can be called before async redirect finishes. Build a
       // empty box until then.
@@ -111,6 +109,8 @@ class RouteBuilder {
     return builderWithNav(
       context,
       _CustomNavigator(
+        // The state needs to persist across rebuild.
+        key: GlobalObjectKey(configuration.navigatorKey.hashCode),
         navigatorKey: configuration.navigatorKey,
         observers: observers,
         navigatorRestorationId: restorationScopeId,
@@ -137,7 +137,6 @@ class _CustomNavigator extends StatefulWidget {
     required this.configuration,
     required this.errorBuilder,
     required this.errorPageBuilder,
-    this.updateParentPages,
   });
 
   final GlobalKey<NavigatorState> navigatorKey;
@@ -155,9 +154,6 @@ class _CustomNavigator extends StatefulWidget {
   final String? navigatorRestorationId;
   final GoRouterWidgetBuilder? errorBuilder;
   final GoRouterPageBuilder? errorPageBuilder;
-
-  /// Notify the parent navigator to update its pages.
-  final VoidCallback? updateParentPages;
 
   @override
   State<StatefulWidget> createState() => _CustomNavigatorState();
@@ -206,9 +202,9 @@ class _CustomNavigatorState extends State<_CustomNavigator> {
     assert(_pages == null);
     final List<Page<Object?>> pages = <Page<Object?>>[];
     final Map<Page<Object?>, RouteMatchBase> pageToRouteMatchBase =
-        <Page<Object?>, RouteMatchBase>{};
+    <Page<Object?>, RouteMatchBase>{};
     final Map<Page<Object?>, GoRouterState> registry =
-        <Page<Object?>, GoRouterState>{};
+    <Page<Object?>, GoRouterState>{};
     if (widget.matchList.isError) {
       pages.add(_buildErrorPage(context, widget.matchList));
     } else {
@@ -245,7 +241,7 @@ class _CustomNavigatorState extends State<_CustomNavigator> {
   Page<Object?>? _buildPageForGoRoute(BuildContext context, RouteMatch match) {
     final GoRouterPageBuilder? pageBuilder = match.route.pageBuilder;
     final GoRouterState state =
-        match.buildState(widget.configuration, widget.matchList);
+    match.buildState(widget.configuration, widget.matchList);
     if (pageBuilder != null) {
       final Page<Object?> page = pageBuilder(context, state);
       if (page is! NoOpPage) {
@@ -260,50 +256,49 @@ class _CustomNavigatorState extends State<_CustomNavigator> {
     }
     return _buildPlatformAdapterPage(context, state,
         Builder(builder: (BuildContext context) {
-      return builder(context, state);
-    }));
+          return builder(context, state);
+        }));
   }
 
   /// Builds a [Page] for a [ShellRouteMatch]
   Page<Object?> _buildPageForShellRoute(
-    BuildContext context,
-    ShellRouteMatch match,
-  ) {
+      BuildContext context,
+      ShellRouteMatch match,
+      ) {
     final GoRouterState state =
-        match.buildState(widget.configuration, widget.matchList);
+    match.buildState(widget.configuration, widget.matchList);
     final GlobalKey<NavigatorState> navigatorKey = match.navigatorKey;
     final ShellRouteContext shellRouteContext = ShellRouteContext(
       route: match.route,
       routerState: state,
       navigatorKey: navigatorKey,
+      match: match,
       routeMatchList: widget.matchList,
-      navigatorBuilder:
-          (List<NavigatorObserver>? observers, String? restorationScopeId) {
+      navigatorBuilder: (
+          GlobalKey<NavigatorState> navigatorKey,
+          ShellRouteMatch match,
+          RouteMatchList matchList,
+          List<NavigatorObserver>? observers,
+          String? restorationScopeId,
+          ) {
         return _CustomNavigator(
           // The state needs to persist across rebuild.
           key: GlobalObjectKey(navigatorKey.hashCode),
           navigatorRestorationId: restorationScopeId,
           navigatorKey: navigatorKey,
           matches: match.matches,
-          matchList: widget.matchList,
+          matchList: matchList,
           configuration: widget.configuration,
           observers: observers ?? const <NavigatorObserver>[],
           onPopPageWithRouteMatch: widget.onPopPageWithRouteMatch,
           // This is used to recursively build pages under this shell route.
           errorBuilder: widget.errorBuilder,
           errorPageBuilder: widget.errorPageBuilder,
-          updateParentPages: () {
-            final ShellRouteMatch routeMatch =
-                _pageToRouteMatchBase[_pages!.last]! as ShellRouteMatch;
-            _pageToRouteMatchBase[_pages!.last] = routeMatch.copyWith(
-              matches: match.matches.sublist(0, match.matches.length - 1),
-            );
-          },
         );
       },
     );
     final Page<Object?>? page =
-        match.route.buildPage(context, state, shellRouteContext);
+    match.route.buildPage(context, state, shellRouteContext);
     if (page != null && page is! NoOpPage) {
       return page;
     }
@@ -369,10 +364,10 @@ class _CustomNavigatorState extends State<_CustomNavigator> {
 
   /// builds the page based on app type, i.e. MaterialApp vs. CupertinoApp
   Page<Object?> _buildPlatformAdapterPage(
-    BuildContext context,
-    GoRouterState state,
-    Widget child,
-  ) {
+      BuildContext context,
+      GoRouterState state,
+      Widget child,
+      ) {
     // build the page based on app type
     _cacheAppType(context);
     return _pageBuilderForAppType!(
@@ -415,25 +410,18 @@ class _CustomNavigatorState extends State<_CustomNavigator> {
     return widget.errorPageBuilder != null
         ? widget.errorPageBuilder!(context, state)
         : _buildPlatformAdapterPage(
-            context,
-            state,
-            errorBuilder != null
-                ? errorBuilder(context, state)
-                : _errorBuilderForAppType!(context, state),
-          );
+      context,
+      state,
+      errorBuilder != null
+          ? errorBuilder(context, state)
+          : _errorBuilderForAppType!(context, state),
+    );
   }
 
   bool _handlePopPage(Route<Object?> route, Object? result) {
     final Page<Object?> page = route.settings as Page<Object?>;
     final RouteMatchBase match = _pageToRouteMatchBase[page]!;
-    final bool didPop = widget.onPopPageWithRouteMatch(route, result, match);
-    if (didPop) {
-      _pages?.remove(page);
-      // Update the registery too.
-      _pageToRouteMatchBase.remove(page);
-      widget.updateParentPages?.call();
-    }
-    return didPop;
+    return widget.onPopPageWithRouteMatch(route, result, match);
   }
 
   @override
